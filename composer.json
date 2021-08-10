@@ -1,5 +1,5 @@
 {
-    "name": "bolt/magento2-j2t-rewardpoints-support",
+    "name": "boltpay/magento2-j2t-rewardpoints-support",
     "version": "1.0.0",
     "description": "Adds support for J2t_Rewardpoints to the Bolt payment gateway integration",
     "type": "magento2-module",
