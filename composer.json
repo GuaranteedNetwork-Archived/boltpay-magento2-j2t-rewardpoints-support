@@ -4,8 +4,7 @@
     "type": "magento2-module",
     "require": {
         "magento/framework": "*",
-        "boltpay/bolt-magento2": "dev-module-support-extraction/j2t-rewards-support-refactor",
-        "j2t/module-rewardpoints": "2.3.*"
+        "boltpay/bolt-magento2": "dev-module-support-extraction/j2t-rewards-support-refactor"
     },
     "autoload": {
         "files": ["registration.php"],
