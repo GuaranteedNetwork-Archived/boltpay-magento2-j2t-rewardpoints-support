@@ -57,42 +57,42 @@ class OrderPlugin
         $this->priceCurrency = $priceCurrency;
     }
 
-    /**
-     * @param \Bolt\Boltpay\Helper\Order $subject
-     * @param \Magento\Quote\Model\Quote $immutableQuote
-     * @param \stdClass                  $transaction
-     *
-     * @return array
-     */
-    public function beforePrepareQuote(\Bolt\Boltpay\Helper\Order $subject, $immutableQuote, $transaction)
-    {
-        try {
-            $pointsUsed = $immutableQuote->getRewardpointsQuantity();
-            if ($pointsUsed > 0) {
-                // J2t reward points can not be applied to shipping.
-                // And if its setting Include Tax On Discounts is enabled,
-                // the discount can be applied to tax.
-                // But since Bolt checkout does not support such a behavior,
-                // we have to exclude tax from the discount calculation.
-                $storeId = $immutableQuote->getStoreId();
-                if ($this->rewardHelper->getIncludeTax($storeId)) {
-                    $maxPointUsage = $this->supportHelper->getMaxPointUsage($immutableQuote, $pointsUsed);
-                    $pointsValue = $this->rewardHelper->getPointMoneyEquivalence(
-                        $maxPointUsage,
-                        true,
-                        $immutableQuote,
-                        $storeId
-                    );
-                    $immutableQuote->setRewardpointsQuantity($maxPointUsage);
-                    $immutableQuote->setBaseRewardpoints($pointsValue);
-                    $immutableQuote->setRewardpoints($this->priceCurrency->convert($pointsValue));
-                    $immutableQuote->save();
-                }
+/**
+ * @param \Bolt\Boltpay\Helper\Order $subject order helper responsible for preparing th quote for order creation
+ * @param \Magento\Quote\Model\Quote $immutableQuote source of truth for order creation
+ * @param \stdClass                  $transaction Bolt order transaction object
+ *
+ * @return array altered parameters to make quote incude rewardpoints if eligible
+ */
+public function beforePrepareQuote(\Bolt\Boltpay\Helper\Order $subject, $immutableQuote, $transaction)
+{
+    try {
+        $pointsUsed = $immutableQuote->getRewardpointsQuantity();
+        if ($pointsUsed > 0) {
+            // J2t reward points can not be applied to shipping.
+            // And if its setting Include Tax On Discounts is enabled,
+            // the discount can be applied to tax.
+            // But since Bolt checkout does not support such a behavior,
+            // we have to exclude tax from the discount calculation.
+            $storeId = $immutableQuote->getStoreId();
+            if ($this->rewardHelper->getIncludeTax($storeId)) {
+                $maxPointUsage = $this->supportHelper->getMaxPointUsage($immutableQuote, $pointsUsed);
+                $pointsValue = $this->rewardHelper->getPointMoneyEquivalence(
+                    $maxPointUsage,
+                    true,
+                    $immutableQuote,
+                    $storeId
+                );
+                $immutableQuote->setRewardpointsQuantity($maxPointUsage);
+                $immutableQuote->setBaseRewardpoints($pointsValue);
+                $immutableQuote->setRewardpoints($this->priceCurrency->convert($pointsValue));
+                $immutableQuote->save();
             }
-        } catch (\Exception $e) {
-            $this->bugsnagHelper->notifyException($e);
-        } finally {
-            return [$immutableQuote, $transaction];
         }
+    } catch (\Exception $e) {
+        $this->bugsnagHelper->notifyException($e);
+    } finally {
+        return [$immutableQuote, $transaction];
     }
+}
 }

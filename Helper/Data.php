@@ -44,7 +44,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      *
      * @param Quote $quote
      * @param float $points
-     *
      */
     public function getMaxPointUsage($quote, $points)
     {

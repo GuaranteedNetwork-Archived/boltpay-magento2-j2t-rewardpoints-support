@@ -68,55 +68,56 @@ class CartPlugin
         $this->discountHelper = $discountHelper;
     }
 
-    /**
-     * @param \Bolt\Boltpay\Helper\Cart $subject
-     * @param                           $result
-     * @param int                       $totalAmount
-     * @param float                     $diff
-     * @param bool                      $paymentOnly
-     * @param                           $quote
-     *
-     * @return array
-     */
-    public function afterCollectDiscounts(\Bolt\Boltpay\Helper\Cart $subject, $result, $totalAmount, $diff, $paymentOnly, $quote)
-    {
-        list ($discounts, $totalAmount, $diff) = $result;
+/**
+ * @param \Bolt\Boltpay\Helper\Cart  $subject     cart helper that is performing the discount collection
+ * @param array                      $result      containing discounts, the total amount and rounded amount
+ *                                                difference
+ * @param int                        $totalAmount original total amount, before disocunt collection
+ * @param float                      $diff        orignal difference after rounding, before discount collection
+ * @param bool                       $paymentOnly whether the current checkout process is payment only
+ * @param \Magento\Quote\Model\Quote $quote       for which the discounts are being collected for
+ *
+ * @return array containing discounts, the total amount and rounded amount difference
+ */
+public function afterCollectDiscounts(\Bolt\Boltpay\Helper\Cart $subject, $result, $totalAmount, $diff, $paymentOnly, $quote)
+{
+    list ($discounts, $totalAmount, $diff) = $result;
 
-        try {
-            $pointsUsed = $quote->getRewardpointsQuantity();
-            if ($pointsUsed > 0) {
+    try {
+        $pointsUsed = $quote->getRewardpointsQuantity();
+        if ($pointsUsed > 0) {
 
-                // J2t reward points can not be applied to shipping.
-                // And if its setting Include Tax On Discounts is enabled,
-                // the discount can be applied to tax.
-                // But since Bolt checkout does not support such a behavior,
-                // we have to exclude tax from the discount calculation.
-                $storeId = $quote->getStoreId();
-                if ($this->rewardHelper->getIncludeTax($storeId)) {
-                    $pointsUsed = $this->supportHelper->getMaxPointUsage($quote, $pointsUsed);
-                }
-                $pointsValue = $this->rewardHelper->getPointMoneyEquivalence($pointsUsed, true, $quote, $storeId);
-                $discountAmount = abs($this->priceCurrency->convert($pointsValue));
-                $currencyCode = $quote->getQuoteCurrencyCode();
-                $roundedDiscountAmount = CurrencyUtils::toMinor($discountAmount, $currencyCode);
-                $discount_type = $this->discountHelper->getBoltDiscountType('by_fixed');
-                $discounts[] = [
-                    'description'       => 'Reward Points',
-                    'amount'            => $roundedDiscountAmount,
-                    'reference'         => \Bolt\J2tRewardpointsSupport\Helper\Data::J2T_REWARD_POINTS,
-                    'discount_category' => Discount::BOLT_DISCOUNT_CATEGORY_STORE_CREDIT,
-                    // For v1/discounts.code.apply and v2/cart.update
-                    'discount_type'     => $discount_type,
-                    // For v1/merchant/order
-                    'type'              => $discount_type,
-                ];
-                $diff -= CurrencyUtils::toMinorWithoutRounding($discountAmount, $currencyCode) - $roundedDiscountAmount;
-                $totalAmount -= $roundedDiscountAmount;
+            // J2t reward points can not be applied to shipping.
+            // And if its setting Include Tax On Discounts is enabled,
+            // the discount can be applied to tax.
+            // But since Bolt checkout does not support such a behavior,
+            // we have to exclude tax from the discount calculation.
+            $storeId = $quote->getStoreId();
+            if ($this->rewardHelper->getIncludeTax($storeId)) {
+                $pointsUsed = $this->supportHelper->getMaxPointUsage($quote, $pointsUsed);
             }
-        } catch (\Exception $e) {
-            $this->bugsnagHelper->notifyException($e);
-        } finally {
-            return [$discounts, $totalAmount, $diff];
+            $pointsValue = $this->rewardHelper->getPointMoneyEquivalence($pointsUsed, true, $quote, $storeId);
+            $discountAmount = abs($this->priceCurrency->convert($pointsValue));
+            $currencyCode = $quote->getQuoteCurrencyCode();
+            $roundedDiscountAmount = CurrencyUtils::toMinor($discountAmount, $currencyCode);
+            $discountType = $this->discountHelper->getBoltDiscountType('by_fixed');
+            $discounts[] = [
+                'description'       => 'Reward Points',
+                'amount'            => $roundedDiscountAmount,
+                'reference'         => \Bolt\J2tRewardpointsSupport\Helper\Data::J2T_REWARD_POINTS,
+                'discount_category' => Discount::BOLT_DISCOUNT_CATEGORY_STORE_CREDIT,
+                // For v1/discounts.code.apply and v2/cart.update
+                'discount_type'     => $discountType,
+                // For v1/merchant/order
+                'type'              => $discountType,
+            ];
+            $diff -= CurrencyUtils::toMinorWithoutRounding($discountAmount, $currencyCode) - $roundedDiscountAmount;
+            $totalAmount -= $roundedDiscountAmount;
         }
+    } catch (\Exception $e) {
+        $this->bugsnagHelper->notifyException($e);
+    } finally {
+        return [$discounts, $totalAmount, $diff];
     }
+}
 }
